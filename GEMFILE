@@ -1,6 +1,6 @@
 source 'http://rubygems.org'
 
-gem 'resque', '>= 1.12'
+gem 'resque', '>= 1.8'
 gem 'heroku', '1.11.0'
 
 group :development do

@@ -3,7 +3,7 @@ module Resque
     module HerokuAutoscaler
       @@heroku_client = nil
 
-      def after_enqueue_scale_workers_up
+      def after_enqueue_scale_workers_up(*args)
         set_workers(1)
       end
 
