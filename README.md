@@ -1,7 +1,7 @@
 Resque Heroku Autoscaler
 ===========
 
-A [Resque][rq] plugin. Requires Resque 1.8 and the Heroku gem (I only testet with 1.11.0).
+A [Resque][rq] plugin. Requires Resque 1.8 and the Heroku gem (only tested with 1.11.0).
 
 This gem scales your Heroku workers according to the number of pending Resque jobs. The original idea comes from Daniel Huckstep's [blog post on the topic][dh]
 
@@ -10,7 +10,7 @@ Just extend your job class with esque::Plugins::HerokuAutoscaler.
 
 For example:
 
-    require 'resque/plugins/heroku_autoscaler'
+    require 'resque/plugins/resque_heroku_autoscaler'
 
     class TestJob
       extend Resque::Plugins::HerokuAutoscaler
