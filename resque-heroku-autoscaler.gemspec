@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift 'lib'
-require 'resque/version'
+require 'resque/plugins/heroku_autoscaler/version'
 
 Gem::Specification.new do |s|
   s.name                     = "resque-heroku-autoscaler"
