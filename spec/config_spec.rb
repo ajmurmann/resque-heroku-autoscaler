@@ -70,7 +70,6 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
       end
 
       job_payload = ["test_queue", "more", "payload"]
-      puts "job_payload: #{job_payload.inspect}"
       subject.new_worker_count(10, *job_payload).should == 10
     end
 
