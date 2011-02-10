@@ -80,7 +80,9 @@ describe Resque::Plugins::HerokuAutoscaler do
 
   describe ".set_workers" do
     it "should use the Heroku client to set the workers" do
-      ENV['HEROKU_APP'] = 'some app name'
+      subject.config do |c|
+        c.heroku_app = 'some app name'
+      end
       mock(TestJob).heroku_client { mock!.set_workers('some app name', 10) }
       TestJob.set_workers(10)
     end
@@ -88,8 +90,10 @@ describe Resque::Plugins::HerokuAutoscaler do
 
   describe ".heroku_client" do
     before do
-      ENV['HEROKU_USER'] = 'john doe'
-      ENV['HEROKU_PASS'] = 'password'
+      subject.config do |c|
+        c.heroku_user = 'john doe'
+        c.heroku_pass = 'password'
+      end
     end
 
     it "should return a heroku client" do
@@ -114,6 +118,14 @@ describe Resque::Plugins::HerokuAutoscaler do
       stub(Heroku::Client).new { a += 1 }
 
       TestJob.heroku_client.should == AnotherJob.heroku_client
+    end
+  end
+
+  describe ".config" do
+    it "yields the configuration" do
+      subject.config do |c|
+        c.should == Resque::Plugins::HerokuAutoscaler::Config
+      end
     end
   end
 end

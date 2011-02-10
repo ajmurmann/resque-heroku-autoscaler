@@ -1,3 +1,5 @@
+require 'resque/plugins/heroku_autoscaler/config'
+
 module Resque
   module Plugins
     module HerokuAutoscaler
@@ -12,11 +14,16 @@ module Resque
       end
 
       def set_workers(number_of_workers)
-        heroku_client.set_workers(ENV['HEROKU_APP'], number_of_workers)
+        heroku_client.set_workers(Resque::Plugins::HerokuAutoscaler::Config.heroku_app, number_of_workers)
       end
 
       def heroku_client
-        @@heroku_client || @@heroku_client = Heroku::Client.new(ENV['HEROKU_USER'], ENV['HEROKU_PASS'])
+        @@heroku_client || @@heroku_client = Heroku::Client.new(Resque::Plugins::HerokuAutoscaler::Config.heroku_user,
+                                                                Resque::Plugins::HerokuAutoscaler::Config.heroku_pass)
+      end
+
+      def self.config
+        yield Resque::Plugins::HerokuAutoscaler::Config
       end
     end
   end

@@ -4,7 +4,7 @@ require 'resque/version'
 Gem::Specification.new do |s|
   s.name                     = "resque-heroku-autoscaler"
   s.date                     = Time.now.strftime('%Y-%m-%d')
-  s.version                  = "0.1.0"
+  s.version                  = Resque::Plugins::HerokuAutoscaler::VERSION
   s.summary                  = "Resque plugin to autoscale your workers on Heroku"
   s.homepage                 = "https://github.com/ajmurmann/resque-heroku-autoscaler"
   s.authors                  = ["Alexander Murmann"]
