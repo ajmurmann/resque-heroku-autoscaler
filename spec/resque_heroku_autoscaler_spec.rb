@@ -20,6 +20,12 @@ RSpec.configure do |config|
 end
 
 describe Resque::Plugins::HerokuAutoscaler do
+  before do
+    @fake_heroku_client = Object.new
+    stub(@fake_heroku_client).set_workers
+    stub(@fake_heroku_client).info { {:workers => 0} }
+  end
+
   it "should be a valid Resque plugin" do
     lambda { Resque::Plugin.lint(Resque::Plugins::HerokuAutoscaler) }.should_not raise_error
   end
@@ -30,25 +36,51 @@ describe Resque::Plugins::HerokuAutoscaler do
     end
 
     it "should take whatever args Resque hands in" do
-      stub(Heroku::Client).new { stub!.set_workers }
+      stub(TestJob).heroku_client { @fake_heroku_client }
 
-      lambda { TestJob.after_enqueue_scale_workers_up("some", "random", "aguments", 42) }.should_not raise_error
+      lambda do
+        TestJob.after_enqueue_scale_workers_up("some", "random", "aguments", 42) 
+      end.should_not raise_error
     end
 
     it "should create one worker" do
       stub(TestJob).workers { 0 }
+      stub(Resque).info{ {:pending => 1} }
       mock(TestJob).set_workers(1)
       TestJob.after_enqueue_scale_workers_up
+    end
+
+    context "when new_worker_count was changed" do
+      before do
+        @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)
+        subject.config do |c|
+          c.new_worker_count do
+            2
+          end
+        end
+      end
+
+      after do
+        Resque::Plugins::HerokuAutoscaler::Config.instance_variable_set(:@new_worker_count, @original_method)
+      end
+
+      it "should use the given block" do
+        mock(TestJob).set_workers(2)
+        TestJob.after_enqueue_scale_workers_up
+      end
     end
   end
 
   describe ".after_perform_scale_workers_down" do
+    before do
+      stub(TestJob).heroku_client { @fake_heroku_client }
+    end
 
     it "should add the hook" do
       Resque::Plugin.after_hooks(TestJob).should include("after_perform_scale_workers_down")
     end
 
-    it "should take whatever args Resque hands in" do      
+    it "should take whatever args Resque hands in" do
       Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
       stub(Heroku::Client).new { stub!.set_workers }
 
@@ -71,8 +103,28 @@ describe Resque::Plugins::HerokuAutoscaler do
         stub(Resque).info { {:pending => 1} }
       end
 
-      it "should not change workers" do
-        dont_allow(TestJob).set_workers
+      it "should keep workers at 1" do
+        mock(TestJob).set_workers(1)
+        TestJob.after_perform_scale_workers_down
+      end
+    end
+
+    context "when new_worker_count was changed" do
+      before do
+        @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)
+        subject.config do |c|
+          c.new_worker_count do
+            2
+          end
+        end
+      end
+
+      after do
+        Resque::Plugins::HerokuAutoscaler::Config.instance_variable_set(:@new_worker_count, @original_method)
+      end
+
+      it "should use the given block" do
+        mock(TestJob).set_workers(2)
         TestJob.after_perform_scale_workers_down
       end
     end
@@ -81,9 +133,11 @@ describe Resque::Plugins::HerokuAutoscaler do
   describe ".set_workers" do
     it "should use the Heroku client to set the workers" do
       subject.config do |c|
-        c.heroku_app = 'some app name'
+        c.heroku_app = 'some_app_name'
       end
-      mock(TestJob).heroku_client { mock!.set_workers('some app name', 10) }
+
+      stub(TestJob).current_workers {0}
+      mock(TestJob).heroku_client { p "returning"; mock(@fake_heroku_client).set_workers('some_app_name', 10) }
       TestJob.set_workers(10)
     end
   end
@@ -126,6 +180,17 @@ describe Resque::Plugins::HerokuAutoscaler do
       subject.config do |c|
         c.should == Resque::Plugins::HerokuAutoscaler::Config
       end
+    end
+  end
+
+  describe ".current_workers" do
+    it "should request the numbers of active workers from Heroku" do
+      subject.config do |c|
+        c.heroku_app = "my_app"
+      end
+
+      mock(TestJob).heroku_client { mock!.info("my_app") { {:workers => 10} } }
+      TestJob.current_workers.should == 10
     end
   end
 end
