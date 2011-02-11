@@ -16,4 +16,8 @@ Gem::Specification.new do |s|
 
   s.add_dependency "resque", ">= 1.8"
   s.add_dependency "heroku"
+
+  s.description       = <<desc
+This gem scales your Heroku workers according to the number of pending Resque jobs. You can customize the scaling behavior of your workers, however you like.
+desc
 end
