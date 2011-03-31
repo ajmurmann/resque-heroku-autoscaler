@@ -1,3 +1,7 @@
+## 0.2.2 (2011-03-31)
+
+* Adding on_failure hook to scale workers down after a failure occurred
+
 ## 0.2.1 (2011-02-11)
 
 * Fixing broken usage of custom new_worker_count block

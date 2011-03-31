@@ -6,11 +6,15 @@ module Resque
       @@heroku_client = nil
 
       def after_enqueue_scale_workers_up(*args)
-        set_workers(Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]))
+        calculate_and_set_workers
       end
 
       def after_perform_scale_workers_down(*args)
-        set_workers(Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]))
+        calculate_and_set_workers
+      end
+
+      def on_failure_scale_workers(*args)
+        calculate_and_set_workers
       end
 
       def set_workers(number_of_workers)
@@ -30,6 +34,12 @@ module Resque
 
       def self.config
         yield Resque::Plugins::HerokuAutoscaler::Config
+      end
+
+      private
+
+      def calculate_and_set_workers
+        set_workers(Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]))
       end
     end
   end

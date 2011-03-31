@@ -130,6 +130,65 @@ describe Resque::Plugins::HerokuAutoscaler do
     end
   end
 
+  describe ".on_failure_scale_workers" do
+    before do
+      stub(TestJob).heroku_client { @fake_heroku_client }
+    end
+
+    it "should add the hook" do
+      Resque::Plugin.failure_hooks(TestJob).should include("on_failure_scale_workers")
+    end
+
+    it "should take whatever args Resque hands in" do
+      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
+      stub(Heroku::Client).new { stub!.set_workers }
+
+      lambda { TestJob.on_failure_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
+    end
+
+    context "when the queue is empty" do
+      before do
+        stub(Resque).info { {:pending => 0} }
+      end
+
+      it "should set workers to 0" do
+        mock(TestJob).set_workers(0)
+        TestJob.on_failure_scale_workers
+      end
+    end
+
+    context "when the queue is not empty" do
+      before do
+        stub(Resque).info { {:pending => 1} }
+      end
+
+      it "should keep workers at 1" do
+        mock(TestJob).set_workers(1)
+        TestJob.on_failure_scale_workers
+      end
+    end
+
+    context "when new_worker_count was changed" do
+      before do
+        @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)
+        subject.config do |c|
+          c.new_worker_count do
+            2
+          end
+        end
+      end
+
+      after do
+        Resque::Plugins::HerokuAutoscaler::Config.instance_variable_set(:@new_worker_count, @original_method)
+      end
+
+      it "should use the given block" do
+        mock(TestJob).set_workers(2)
+        TestJob.on_failure_scale_workers
+      end
+    end
+  end
+
   describe ".set_workers" do
     it "should use the Heroku client to set the workers" do
       subject.config do |c|
