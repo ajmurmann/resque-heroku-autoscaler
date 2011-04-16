@@ -54,6 +54,15 @@ Per default RHA will only start a single worker, no matter how many jobs are pen
 
 When calculating the new number of required workers the block given to new_worker_count will be called. Thus the example will result in starting one additional worker for every 5 pending jobs.
 
+You might want to turn off scaling of your workers in development modus. You can do that by setting _scaling_disabled_ to true in your init script:
+
+    if (Rails.env == 'development')
+      Resque::Plugins::HerokuAutoscaler.config do |c|
+        c.scaling_disabled = true
+      end
+    end
+
+
 
 [dh]: http://blog.darkhax.com/2010/07/30/auto-scale-your-resque-workers-on-heroku
 [rq]: http://github.com/defunkt/resque
