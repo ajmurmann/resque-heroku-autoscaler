@@ -39,7 +39,19 @@ module Resque
       private
 
       def calculate_and_set_workers
+        if Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?
+          log "Scaling workers disabled. Skipping."
+          return
+        end
         set_workers(Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]))
+      end
+
+      def log(message)
+        if defined?(Rails)
+          Rails.logger.info(message)
+        else
+          puts message
+        end
       end
     end
   end

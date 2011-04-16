@@ -43,6 +43,16 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
     end
   end
 
+  describe ".scaling_disabled?" do
+
+    it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be_false}
+
+    it "sets scaling to disabled" do
+      subject.scaling_disabled = true
+      subject.scaling_disabled?.should be_true
+    end
+  end
+
   describe ".new_worker_count" do
     before do
       @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)

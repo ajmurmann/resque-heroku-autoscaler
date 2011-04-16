@@ -4,6 +4,13 @@ module Resque
       module Config
         extend self
 
+        @scaling_disabled = false
+
+        attr_writer :scaling_disabled
+        def scaling_disabled?
+          @scaling_disabled
+        end
+
         @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
 
         attr_writer :heroku_user
@@ -27,6 +34,11 @@ module Resque
           else
             @new_worker_count.call(pending, *payload)
           end
+        end
+
+        def reset
+          @scaling_disabled = false
+          @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
         end
       end
     end

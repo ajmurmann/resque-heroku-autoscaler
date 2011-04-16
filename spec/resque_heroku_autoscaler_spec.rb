@@ -24,6 +24,8 @@ describe Resque::Plugins::HerokuAutoscaler do
     @fake_heroku_client = Object.new
     stub(@fake_heroku_client).set_workers
     stub(@fake_heroku_client).info { {:workers => 0} }
+    stub(TestJob).log
+    Resque::Plugins::HerokuAutoscaler::Config.reset
   end
 
   it "should be a valid Resque plugin" do
@@ -66,6 +68,19 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should use the given block" do
         mock(TestJob).set_workers(2)
+        TestJob.after_enqueue_scale_workers_up
+      end
+    end
+
+    context "when scaling workers is disabled" do
+      before do
+        subject.config do |c|
+          c.scaling_disabled = true
+        end
+      end
+
+      it "should not use the heroku client" do
+        dont_allow(TestJob).heroku_client
         TestJob.after_enqueue_scale_workers_up
       end
     end
@@ -128,6 +143,19 @@ describe Resque::Plugins::HerokuAutoscaler do
         TestJob.after_perform_scale_workers_down
       end
     end
+
+    context "when scaling workers is disabled" do
+      before do
+        subject.config do |c|
+          c.scaling_disabled = true
+        end
+      end
+
+      it "should not use the heroku client" do
+        dont_allow(TestJob).heroku_client
+        TestJob.after_perform_scale_workers_down
+      end
+    end
   end
 
   describe ".on_failure_scale_workers" do
@@ -187,6 +215,19 @@ describe Resque::Plugins::HerokuAutoscaler do
         TestJob.on_failure_scale_workers
       end
     end
+
+    context "when scaling workers is disabled" do
+      before do
+        subject.config do |c|
+          c.scaling_disabled = true
+        end
+      end
+
+      it "should not use the heroku client" do
+        dont_allow(TestJob).heroku_client
+        TestJob.on_failure_scale_workers
+      end
+    end
   end
 
   describe ".set_workers" do
@@ -196,7 +237,7 @@ describe Resque::Plugins::HerokuAutoscaler do
       end
 
       stub(TestJob).current_workers {0}
-      mock(TestJob).heroku_client { p "returning"; mock(@fake_heroku_client).set_workers('some_app_name', 10) }
+      mock(TestJob).heroku_client { mock(@fake_heroku_client).set_workers('some_app_name', 10) }
       TestJob.set_workers(10)
     end
   end
