@@ -9,7 +9,7 @@ module Resque
         calculate_and_set_workers
       end
 
-      def after_perform_scale_workers_down(*args)
+      def after_perform_scale_workers(*args)
         calculate_and_set_workers
       end
 
@@ -23,7 +23,7 @@ module Resque
         end
       end
 
-      def current_workers        
+      def current_workers
         heroku_client.info(Resque::Plugins::HerokuAutoscaler::Config.heroku_app)[:workers].to_i
       end
 
@@ -39,11 +39,10 @@ module Resque
       private
 
       def calculate_and_set_workers
-        if Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?
-          log "Scaling workers disabled. Skipping."
-          return
+        unless Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?
+          new_count = Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending])
+          set_workers(new_count) if new_count == 0 || new_count > current_workers
         end
-        set_workers(Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]))
       end
 
       def log(message)

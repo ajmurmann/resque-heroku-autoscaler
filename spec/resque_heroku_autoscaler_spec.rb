@@ -46,7 +46,7 @@ describe Resque::Plugins::HerokuAutoscaler do
     end
 
     it "should create one worker" do
-      stub(TestJob).workers { 0 }
+      stub(TestJob).current_workers { 0 }
       stub(Resque).info{ {:pending => 1} }
       mock(TestJob).set_workers(1)
       TestJob.after_enqueue_scale_workers_up
@@ -54,6 +54,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
     context "when new_worker_count was changed" do
       before do
+        stub(TestJob).current_workers { 1 }
         @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)
         subject.config do |c|
           c.new_worker_count do
@@ -86,20 +87,20 @@ describe Resque::Plugins::HerokuAutoscaler do
     end
   end
 
-  describe ".after_perform_scale_workers_down" do
+  describe ".after_perform_scale_workers" do
     before do
       stub(TestJob).heroku_client { @fake_heroku_client }
     end
 
     it "should add the hook" do
-      Resque::Plugin.after_hooks(TestJob).should include("after_perform_scale_workers_down")
+      Resque::Plugin.after_hooks(TestJob).should include("after_perform_scale_workers")
     end
 
     it "should take whatever args Resque hands in" do
       Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
       stub(Heroku::Client).new { stub!.set_workers }
 
-      lambda { TestJob.after_perform_scale_workers_down("some", "random", "aguments", 42) }.should_not raise_error
+      lambda { TestJob.after_perform_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
     end
 
     context "when the queue is empty" do
@@ -109,7 +110,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should set workers to 0" do
         mock(TestJob).set_workers(0)
-        TestJob.after_perform_scale_workers_down
+        TestJob.after_perform_scale_workers
       end
     end
 
@@ -120,7 +121,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should keep workers at 1" do
         mock(TestJob).set_workers(1)
-        TestJob.after_perform_scale_workers_down
+        TestJob.after_perform_scale_workers
       end
     end
 
@@ -140,7 +141,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should use the given block" do
         mock(TestJob).set_workers(2)
-        TestJob.after_perform_scale_workers_down
+        TestJob.after_perform_scale_workers
       end
     end
 
@@ -153,7 +154,17 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should not use the heroku client" do
         dont_allow(TestJob).heroku_client
-        TestJob.after_perform_scale_workers_down
+        TestJob.after_perform_scale_workers
+      end
+    end
+
+    describe "when the new worker count would should down some workers" do
+      before do
+        stub(TestJob).current_workers { 2 }
+      end
+      it "should not scale down workers since we don't want to accidentally shut down busy workers" do
+        dont_allow(TestJob).set_workers
+        TestJob.after_perform_scale_workers
       end
     end
   end
@@ -226,6 +237,16 @@ describe Resque::Plugins::HerokuAutoscaler do
       it "should not use the heroku client" do
         dont_allow(TestJob).heroku_client
         TestJob.on_failure_scale_workers
+      end
+    end
+
+    describe "when the new worker count would should down some workers" do
+      before do
+        stub(TestJob).current_workers { 2 }
+      end
+      it "should not scale down workers since we don't want to accidentally shut down busy workers" do
+        dont_allow(TestJob).set_workers
+        TestJob.after_perform_scale_workers
       end
     end
   end
