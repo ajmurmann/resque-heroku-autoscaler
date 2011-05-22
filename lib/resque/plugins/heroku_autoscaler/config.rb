@@ -28,6 +28,11 @@ module Resque
           @heroku_app || ENV['HEROKU_APP']
         end
 
+        attr_writer :wait_time
+        def wait_time
+          @wait_time || 60
+        end
+
         def new_worker_count(pending=nil, *payload, &calculate_count)
           if calculate_count
             @new_worker_count = calculate_count

@@ -53,6 +53,16 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
     end
   end
 
+  describe ".wait_time" do
+
+    it{ Resque::Plugins::HerokuAutoscaler::Config.wait_time.should == 60}
+
+    it "can be set" do
+      subject.wait_time = 30
+      subject.wait_time.should == 30
+    end
+  end
+
   describe ".new_worker_count" do
     before do
       @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)

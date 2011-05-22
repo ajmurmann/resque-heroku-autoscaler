@@ -2,6 +2,7 @@ require 'rspec'
 require 'heroku'
 require 'resque'
 require 'resque/plugins/resque_heroku_autoscaler'
+require 'timecop'
 
 class TestJob
   extend Resque::Plugins::HerokuAutoscaler
@@ -62,6 +63,17 @@ describe Resque::Plugins::HerokuAutoscaler do
       Resque::Plugins::HerokuAutoscaler::Config.instance_variable_set(:@new_worker_count, @original_method)
     end
 
+    it "should set last_scaled" do
+      now = Time.now
+      Timecop.freeze(now)
+      stub(TestJob).set_workers(1)
+
+      TestJob.after_enqueue_scale_workers_up
+      Resque.redis.get('last_scaled').should == now.to_s
+
+      Timecop.return
+    end
+
     context "when scaling workers is disabled" do
       before do
         subject.config do |c|
@@ -78,9 +90,9 @@ describe Resque::Plugins::HerokuAutoscaler do
 
   describe ".after_perform_scale_workers" do
     before do
+      Resque.redis.set('last_scaled', Time.now - 120)
       stub(TestJob).heroku_client { @fake_heroku_client }
     end
-
     it "should add the hook" do
       Resque::Plugin.after_hooks(TestJob).should include("after_perform_scale_workers")
     end
@@ -91,75 +103,11 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       lambda { TestJob.after_perform_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
     end
-
-    context "when the queue is empty" do
-      before do
-        stub(Resque).info { {:pending => 0} }
-      end
-
-      it "should set workers to 0" do
-        mock(TestJob).set_workers(0)
-        TestJob.after_perform_scale_workers
-      end
-    end
-
-    context "when the queue is not empty" do
-      before do
-        stub(Resque).info { {:pending => 1} }
-      end
-
-      it "should keep workers at 1" do
-        mock(TestJob).set_workers(1)
-        TestJob.after_perform_scale_workers
-      end
-    end
-
-    context "when new_worker_count was changed" do
-      before do
-        @original_method = Resque::Plugins::HerokuAutoscaler::Config.instance_variable_get(:@new_worker_count)
-        subject.config do |c|
-          c.new_worker_count do
-            2
-          end
-        end
-      end
-
-      after do
-        Resque::Plugins::HerokuAutoscaler::Config.instance_variable_set(:@new_worker_count, @original_method)
-      end
-
-      it "should use the given block" do
-        mock(TestJob).set_workers(2)
-        TestJob.after_perform_scale_workers
-      end
-    end
-
-    context "when scaling workers is disabled" do
-      before do
-        subject.config do |c|
-          c.scaling_disabled = true
-        end
-      end
-
-      it "should not use the heroku client" do
-        dont_allow(TestJob).heroku_client
-        TestJob.after_perform_scale_workers
-      end
-    end
-
-    describe "when the new worker count would should down some workers" do
-      before do
-        stub(TestJob).current_workers { 2 }
-      end
-      it "should not scale down workers since we don't want to accidentally shut down busy workers" do
-        dont_allow(TestJob).set_workers
-        TestJob.after_perform_scale_workers
-      end
-    end
   end
 
   describe ".on_failure_scale_workers" do
     before do
+      Resque.redis.set('last_scaled', Time.now - 120)
       stub(TestJob).heroku_client { @fake_heroku_client }
     end
 
@@ -173,15 +121,33 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       lambda { TestJob.on_failure_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
     end
+  end
 
+  describe ".calculate_and_set_workers" do
+    before do
+      Resque.redis.set('last_scaled', Time.now - 120)
+      stub(TestJob).heroku_client { @fake_heroku_client }
+    end
+    
     context "when the queue is empty" do
       before do
+        @now = Time.now
+        Timecop.freeze(@now)
         stub(Resque).info { {:pending => 0} }
       end
 
+      after { Timecop.return }
+
       it "should set workers to 0" do
         mock(TestJob).set_workers(0)
-        TestJob.on_failure_scale_workers
+        TestJob.calculate_and_set_workers
+      end
+
+      it "sets last scaled time" do
+        stub(TestJob).set_workers(0)
+
+        TestJob.calculate_and_set_workers
+        Resque.redis.get('last_scaled').should == @now.to_s
       end
     end
 
@@ -192,7 +158,20 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should keep workers at 1" do
         mock(TestJob).set_workers(1)
-        TestJob.on_failure_scale_workers
+        TestJob.calculate_and_set_workers
+      end
+
+      context "when scaling workers is disabled" do
+        before do
+          subject.config do |c|
+            c.scaling_disabled = true
+          end
+        end
+
+        it "should not use the heroku client" do
+          dont_allow(TestJob).heroku_client
+          TestJob.calculate_and_set_workers
+        end
       end
     end
 
@@ -212,30 +191,43 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should use the given block" do
         mock(TestJob).set_workers(2)
-        TestJob.on_failure_scale_workers
+        TestJob.calculate_and_set_workers
       end
     end
 
-    context "when scaling workers is disabled" do
-      before do
-        subject.config do |c|
-          c.scaling_disabled = true
-        end
-      end
-
-      it "should not use the heroku client" do
-        dont_allow(TestJob).heroku_client
-        TestJob.on_failure_scale_workers
-      end
-    end
-
-    describe "when the new worker count would should down some workers" do
+    context "when the new worker count might shut down busy workers" do
       before do
         stub(TestJob).current_workers { 2 }
       end
       it "should not scale down workers since we don't want to accidentally shut down busy workers" do
         dont_allow(TestJob).set_workers
-        TestJob.after_perform_scale_workers
+        TestJob.calculate_and_set_workers
+      end
+    end
+
+    describe "when we changed the worker count in less than minimum wait time" do
+      before do
+        subject.config { |c| c.wait_time = 5}
+        @last_set = Time.parse("00:00:00")
+        Resque.redis.set('last_scaled', @last_set)
+      end
+
+      after { Timecop.return }
+
+      it "should not adjust the worker count" do
+        Timecop.freeze(@last_set + 4)
+        dont_allow(TestJob).set_workers
+        TestJob.calculate_and_set_workers
+      end
+
+      context "when there are no jobs left" do
+        it "keeps checking for jobs and scales down if no job appeard" do
+          Timecop.freeze(@last_set)
+          mock(Resque).info.times(12) { {:pending => 0} }
+          mock(Kernel).sleep(0.5).times(10) { Timecop.freeze(@last_set += 0.5) }
+          mock(TestJob).set_workers(0)
+          TestJob.calculate_and_set_workers
+        end
       end
     end
   end

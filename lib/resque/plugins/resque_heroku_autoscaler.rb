@@ -7,9 +7,10 @@ module Resque
 
       def after_enqueue_scale_workers_up(*args)
         if !Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled? && \
-           Resque.info[:workers] == 0 && \
-           Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1
+          Resque.info[:workers] == 0 && \
+          Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1
           set_workers(1)
+          Resque.redis.set('last_scaled', Time.now)
         end
       end
 
@@ -40,13 +41,31 @@ module Resque
         yield Resque::Plugins::HerokuAutoscaler::Config
       end
 
-      private
-
       def calculate_and_set_workers
         unless Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?
-          new_count = Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending])
-          set_workers(new_count) if new_count == 0 || new_count > current_workers
+          wait_for_task_or_scale
+          if time_to_scale?
+            scale
+          end
         end
+      end
+
+      private
+
+      def scale
+        new_count = Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending])
+        set_workers(new_count) if new_count == 0 || new_count > current_workers
+        Resque.redis.set('last_scaled', Time.now)
+      end
+
+      def wait_for_task_or_scale
+        until Resque.info[:pending] > 0 || time_to_scale?
+          Kernel.sleep(0.5)
+        end
+      end
+
+      def time_to_scale?
+        (Time.now - Time.parse(Resque.redis.get('last_scaled'))) >=  Resque::Plugins::HerokuAutoscaler::Config.wait_time
       end
 
       def log(message)
