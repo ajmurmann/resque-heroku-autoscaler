@@ -6,13 +6,12 @@ module Resque
       @@heroku_client = nil
 
       def after_enqueue_scale_workers_up(*args)
-        puts "in after_enqueue"
-        Rails.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-        Rails.logger.info("AFTER ENQUEUE")
-        Rails.logger.info("Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?: #{Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?}")
-        Rails.logger.info("Resque.info[:workers] == 0: #{Resque.info[:workers] == 0}")
-        Rails.logger.info("Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1: #{Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1}")
-        Rails.logger.info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
+        puts ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
+        puts "AFTER ENQUEUE"
+        puts "Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?: #{Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?}"
+        puts "Resque.info[:workers] == 0: #{Resque.info[:workers] == 0}"
+        puts "Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1: #{Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1}"
+        puts "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"
         if !Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled? && \
             Resque.info[:workers] == 0 && \
             Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1
