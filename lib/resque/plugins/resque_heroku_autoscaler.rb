@@ -6,9 +6,17 @@ module Resque
       @@heroku_client = nil
 
       def after_enqueue_scale_workers_up(*args)
+        puts "in after_enqueue"
+        Rails.logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+        Rails.logger.info("AFTER ENQUEUE")
+        Rails.logger.info("Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?: #{Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?}")
+        Rails.logger.info("Resque.info[:workers] == 0: #{Resque.info[:workers] == 0}")
+        Rails.logger.info("Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1: #{Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1}")
+        Rails.logger.info("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
         if !Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled? && \
-          Resque.info[:workers] == 0 && \
-          Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1
+            Resque.info[:workers] == 0 && \
+            Resque::Plugins::HerokuAutoscaler::Config.new_worker_count(Resque.info[:pending]) >= 1
+          Rails.logger.info("about to set workers")
           set_workers(1)
           Resque.redis.set('last_scaled', Time.now)
         end
