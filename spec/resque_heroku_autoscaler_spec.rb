@@ -1,8 +1,4 @@
-require 'rspec'
-require 'heroku'
-require 'resque'
-require 'resque/plugins/resque_heroku_autoscaler'
-require 'timecop'
+require 'spec_helper'
 
 class TestJob
   extend Resque::Plugins::HerokuAutoscaler
@@ -14,10 +10,6 @@ class AnotherJob
   extend Resque::Plugins::HerokuAutoscaler
 
   @queue = :test
-end
-
-RSpec.configure do |config|
-  config.mock_with :rr
 end
 
 describe Resque::Plugins::HerokuAutoscaler do

@@ -1,7 +1,4 @@
-require 'rspec'
-require 'heroku'
-require 'resque'
-require 'resque/plugins/heroku_autoscaler/config'
+require 'spec_helper'
 
 describe Resque::Plugins::HerokuAutoscaler::Config do
   describe ".heroku_user" do
