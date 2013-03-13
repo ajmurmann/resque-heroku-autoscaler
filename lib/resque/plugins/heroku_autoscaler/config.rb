@@ -13,14 +13,9 @@ module Resque
 
         @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
 
-        attr_writer :heroku_user
-        def heroku_user
-          @heroku_user || ENV['HEROKU_USER']
-        end
-
-        attr_writer :heroku_pass
-        def heroku_pass
-          @heroku_pass || ENV['HEROKU_PASS']
+        attr_writer :heroku_api_key
+        def heroku_api_key
+          @heroku_api_key || ENV['HEROKU_API_KEY']
         end
 
         attr_writer :heroku_app
