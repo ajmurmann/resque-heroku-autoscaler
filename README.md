@@ -1,26 +1,25 @@
 Resque Heroku Autoscaler (RHA)
 =======================
 
-A [Resque][rq] plugin. Requires Resque 1.8 and the Heroku gem (only tested with 1.11.0).
+A [Resque][rq] plugin. Requires Resque 1.8 and the Heroku-api gem.
 
 This gem scales your Heroku workers according to the number of pending Resque jobs. The original idea comes from Daniel Huckstep's [blog post on the topic][dh]
+
 
 ##Setup
 
 In order for the scaling to work RHA needs to know your **Heroku app's name, your Heroku user name and your Heroku password**. Per default those are being read from the following environment variables:
 
 - HEROKU_APP
-- HEROKU_USER
-- HEROKU_PASS
+- HEROKU_API_KEY
 
 If you prefer you also can configure RHA using a config block. For example you might put the following into config/initialiazers/resque_heroku_autoscaler_setup.config
 
     require 'resque/plugins/resque_heroku_autoscaler'
 
     Resque::Plugins::HerokuAutoscaler.config do |c|
-      c.heroku_user = 'john doe'
-      c.heroku_pass = ENV['HEROKU_PASSWORD']
       c.heroku_app  = "my_app_#{Rails.env}"
+      c.heroku_api_key = 'abdcef'
     end
 
 

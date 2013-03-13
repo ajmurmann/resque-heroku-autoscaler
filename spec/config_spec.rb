@@ -1,29 +1,16 @@
 require 'spec_helper'
 
 describe Resque::Plugins::HerokuAutoscaler::Config do
-  describe ".heroku_user" do
-    it "stores the given heroku user name" do
-      subject.heroku_user = "my_user@example.com"
-      subject.heroku_user.should == "my_user@example.com"
+  describe ".heroku_api_key" do
+    it "stores the given heroku api key" do
+      subject.heroku_api_key = "abcd"
+      subject.heroku_api_key.should == "abcd"
     end
 
-    it "defaults to HEROKU_USER environment variable" do
-      subject.heroku_user = nil
-      ENV["HEROKU_USER"]  = "user@example.com"
-      subject.heroku_user.should == "user@example.com"
-    end
-  end
-
-  describe ".heroku_pass" do
-    it "stores the given heroku password" do
-      subject.heroku_pass = "password"
-      subject.heroku_pass.should == "password"
-    end
-
-    it "defaults to HEROKU_PASS environment variable" do
-      subject.heroku_pass = nil
-      ENV["HEROKU_PASS"]  = "123"
-      subject.heroku_pass.should == "123"
+    it "defaults to HEROKU_API_KEY environment variable" do
+      subject.heroku_api_key = nil
+      ENV["HEROKU_API_KEY"]  = "abcdef"
+      subject.heroku_api_key.should == "abcdef"
     end
   end
 

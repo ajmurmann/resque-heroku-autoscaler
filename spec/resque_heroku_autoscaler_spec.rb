@@ -14,10 +14,9 @@ end
 
 describe Resque::Plugins::HerokuAutoscaler do
   before do
-    @fake_heroku_client = Object.new
-    stub(@fake_heroku_client).set_workers
-    stub(@fake_heroku_client).info { {:workers => 0} }
-    stub(TestJob).log
+    @fake_heroku_api = Object.new
+    stub(@fake_heroku_api).post_ps_scale
+    # stub(TestJob).log
     Resque::Plugins::HerokuAutoscaler::Config.reset
   end
 
@@ -27,11 +26,12 @@ describe Resque::Plugins::HerokuAutoscaler do
 
   describe ".after_enqueue_scale_workers_up" do
     it "should add the hook" do
-      Resque::Plugin.after_enqueue_hooks(TestJob).should include("after_enqueue_scale_workers_up")
+      Resque::Plugin.after_enqueue_hooks(TestJob).should include(:after_enqueue_scale_workers_up)
     end
 
     it "should take whatever args Resque hands in" do
-      stub(TestJob).heroku_client { @fake_heroku_client }
+      stub(TestJob).heroku_api { @fake_heroku_api }
+      stub(TestJob).current_workers { 1 }
 
       lambda do
         TestJob.after_enqueue_scale_workers_up("some", "random", "aguments", 42)
@@ -74,7 +74,7 @@ describe Resque::Plugins::HerokuAutoscaler do
       end
 
       it "should not use the heroku client" do
-        dont_allow(TestJob).heroku_client
+        dont_allow(TestJob).heroku_api
         TestJob.after_enqueue_scale_workers_up
       end
     end
@@ -83,15 +83,16 @@ describe Resque::Plugins::HerokuAutoscaler do
   describe ".after_perform_scale_workers" do
     before do
       Resque.redis.set('last_scaled', Time.now - 120)
-      stub(TestJob).heroku_client { @fake_heroku_client }
+      stub(TestJob).heroku_api { @fake_heroku_api }
     end
     it "should add the hook" do
-      Resque::Plugin.after_hooks(TestJob).should include("after_perform_scale_workers")
+      Resque::Plugin.after_hooks(TestJob).should include(:after_perform_scale_workers)
     end
 
     it "should take whatever args Resque hands in" do
-      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
-      stub(Heroku::Client).new { stub!.set_workers }
+      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_api = nil")
+      stub(::Heroku::API).new { stub!.set_workers }
+      stub(TestJob).current_workers { 1 }
 
       lambda { TestJob.after_perform_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
     end
@@ -100,16 +101,17 @@ describe Resque::Plugins::HerokuAutoscaler do
   describe ".on_failure_scale_workers" do
     before do
       Resque.redis.set('last_scaled', Time.now - 120)
-      stub(TestJob).heroku_client { @fake_heroku_client }
+      stub(TestJob).heroku_api { @fake_heroku_api }
     end
 
     it "should add the hook" do
-      Resque::Plugin.failure_hooks(TestJob).should include("on_failure_scale_workers")
+      Resque::Plugin.failure_hooks(TestJob).should include(:on_failure_scale_workers)
     end
 
     it "should take whatever args Resque hands in" do
-      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
-      stub(Heroku::Client).new { stub!.set_workers }
+      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_api = nil")
+      stub(::Heroku::API).new { stub!.set_workers }
+      stub(TestJob).current_workers { 1 }
 
       lambda { TestJob.on_failure_scale_workers("some", "random", "aguments", 42) }.should_not raise_error
     end
@@ -118,9 +120,9 @@ describe Resque::Plugins::HerokuAutoscaler do
   describe ".calculate_and_set_workers" do
     before do
       Resque.redis.set('last_scaled', Time.now - 120)
-      stub(TestJob).heroku_client { @fake_heroku_client }
+      stub(TestJob).heroku_api { @fake_heroku_api }
     end
-    
+
     context "when the queue is empty" do
       before do
         @now = Time.now
@@ -150,6 +152,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should keep workers at 1" do
         mock(TestJob).set_workers(1)
+        stub(TestJob).current_workers { 0 }
         TestJob.calculate_and_set_workers
       end
 
@@ -161,7 +164,7 @@ describe Resque::Plugins::HerokuAutoscaler do
         end
 
         it "should not use the heroku client" do
-          dont_allow(TestJob).heroku_client
+          dont_allow(TestJob).heroku_api
           TestJob.calculate_and_set_workers
         end
       end
@@ -183,6 +186,7 @@ describe Resque::Plugins::HerokuAutoscaler do
 
       it "should use the given block" do
         mock(TestJob).set_workers(2)
+        stub(TestJob).current_workers { 1 }
         TestJob.calculate_and_set_workers
       end
     end
@@ -231,41 +235,40 @@ describe Resque::Plugins::HerokuAutoscaler do
       end
 
       stub(TestJob).current_workers { 0 }
-      mock(TestJob).heroku_client { mock(@fake_heroku_client).set_workers('some_app_name', 10) }
+      mock(TestJob).heroku_api { mock(@fake_heroku_api).post_ps_scale('some_app_name', 'worker', 10) }
       TestJob.set_workers(10)
     end
   end
 
-  describe ".heroku_client" do
+  describe ".heroku_api" do
     before do
       subject.config do |c|
-        c.heroku_user = 'john doe'
-        c.heroku_pass = 'password'
+        c.heroku_api_key = 'abcdefg'
       end
     end
 
-    it "should return a heroku client" do
-      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
-      TestJob.heroku_client.should be_a(Heroku::Client)
-    end
+    # it "should return a heroku client" do
+    #   Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_api = nil")
+    #   TestJob.heroku_api.should be_a(::Heroku::API)
+    # end
 
     it "should use the right username and password" do
-      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_client = nil")
-      mock(Heroku::Client).new('john doe', 'password')
-      TestJob.heroku_client
+      Resque::Plugins::HerokuAutoscaler.class_eval("@@heroku_api = nil")
+      mock(::Heroku::API).new(:api_key => 'abcdefg')
+      TestJob.heroku_api
     end
 
     it "should return the same client for multiple jobs" do
       a = 0
-      stub(Heroku::Client).new { a += 1 }
-      TestJob.heroku_client.should == TestJob.heroku_client
+      stub(::Heroku::API).new { a += 1 }
+      TestJob.heroku_api.should == TestJob.heroku_api
     end
 
     it "should share the same client across differnet job types" do
       a = 0
-      stub(Heroku::Client).new { a += 1 }
+      stub(::Heroku::API).new { a += 1 }
 
-      TestJob.heroku_client.should == AnotherJob.heroku_client
+      TestJob.heroku_api.should == AnotherJob.heroku_api
     end
   end
 
@@ -283,8 +286,14 @@ describe Resque::Plugins::HerokuAutoscaler do
         c.heroku_app = "my_app"
       end
 
-      mock(TestJob).heroku_client { mock!.info("my_app") { {:workers => 10} } }
-      TestJob.current_workers.should == 10
+      mock(TestJob).heroku_api { mock!.get_ps("my_app") { mock!.body {
+        [
+          { "app_name" => "my_app", "process" => "web.1" },
+          { "app_name" => "my_app", "process" => "worker.1" },
+          { "app_name" => "my_app", "process" => "worker.2" },
+        ]
+      } } }
+      TestJob.current_workers.should == 2
     end
   end
 end
