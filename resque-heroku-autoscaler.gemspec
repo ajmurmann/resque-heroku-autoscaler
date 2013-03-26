@@ -10,12 +10,13 @@ Gem::Specification.new do |s|
   s.authors                  = ["Alexander Murmann"]
   s.email                    = "ajmurmann@gmail.com"
 
-  s.files                    = %w( README.md MIT.LICENSE GEMFILE )
+  s.files                    = %w( README.md MIT.LICENSE Gemfile )
   s.files                    += Dir.glob("lib/**/*")
   s.files                    += Dir.glob("spec/**/*")
 
   s.add_dependency "resque", ">= 1.8"
-  s.add_dependency "heroku"
+  s.add_dependency "heroku-api"
+  s.add_dependency "activesupport"
 
   s.description       = <<desc
 This gem scales your Heroku workers according to the number of pending Resque jobs. You can customize the scaling behavior of your workers, however you like.

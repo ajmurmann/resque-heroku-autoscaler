@@ -1,7 +1,8 @@
 require 'rspec'
-require 'heroku'
+require 'heroku-api'
 require 'resque'
 require 'timecop'
+require 'active_support/all'
 require 'resque/plugins/heroku_autoscaler/config'
 require 'resque/plugins/resque_heroku_autoscaler'
 
