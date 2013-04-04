@@ -23,6 +23,11 @@ module Resque
           @heroku_app || ENV['HEROKU_APP']
         end
 
+        attr_writer :heroku_process
+        def heroku_process
+          @heroku_process || 'worker'
+        end
+
         attr_writer :wait_time
         def wait_time
           @wait_time || 60

@@ -27,6 +27,18 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
     end
   end
 
+  describe ".heroku_process" do
+    it "stores the given heroku process name" do
+      subject.heroku_process = "test-worker"
+      subject.heroku_app.should == "test-worker"
+    end
+
+    it "defaults to worker" do
+      subject.heroku_app = nil
+      subject.heroku_app.should == "worker"
+    end
+  end
+
   describe ".scaling_disabled?" do
 
     it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be_false}
