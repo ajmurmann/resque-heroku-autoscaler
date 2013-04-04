@@ -28,7 +28,7 @@ module Resque
 
       def set_workers(number_of_workers)
         if number_of_workers != current_workers
-          heroku_api.post_ps_scale(config.heroku_app, 'worker', number_of_workers)
+          heroku_api.post_ps_scale(config.heroku_app, config.heroku_process, number_of_workers)
         end
       end
 
