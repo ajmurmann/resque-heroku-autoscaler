@@ -72,7 +72,7 @@ module Resque
       end
 
       def time_to_scale?
-        (Time.now - Time.parse(Resque.redis.get('last_scaled'))) >=  autoscaler_configconfig.wait_time
+        (Time.now - Time.parse(Resque.redis.get('last_scaled'))) >=  autoscaler_config.wait_time
       end
 
       def log(message)
