@@ -89,31 +89,31 @@ module Resque
           end
         end
 
-        def scaling_system
-          Proc.new do |data_hsh|
-            pending = data_hsh[:pending].to_i
-            workers = data_hsh[:workers].to_i
-            working = data_hsh[:working].to_i
-            if pending > 0
-              if (workers - 4) < working
-                1
-              else
-                # do nothing
-                0
-              end
-            else
-              if working == 0
-                # kill all the workers
-                nil
-              elsif (workers > working + 8)
-                -1
-              else
-                # do nothing
-                0
-              end
-            end
-          end
-        end
+        # def scaling_system
+        #   Proc.new do |data_hsh|
+        #     pending = data_hsh[:pending].to_i
+        #     workers = data_hsh[:workers].to_i
+        #     working = data_hsh[:working].to_i
+        #     if pending > 0
+        #       if (workers - 4) < working
+        #         1
+        #       else
+        #         # do nothing
+        #         0
+        #       end
+        #     else
+        #       if working == 0
+        #         # kill all the workers
+        #         nil
+        #       elsif (workers > working + 8)
+        #         -1
+        #       else
+        #         # do nothing
+        #         0
+        #       end
+        #     end
+        #   end
+        # end
       end
     end
   end
