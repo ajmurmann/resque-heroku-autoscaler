@@ -38,6 +38,7 @@ module Resque
 
 				cwd = current_worker_dynos if cwd.nil?
 				log("\nScaling Resque Worker - new_dyno_count = |#{new_dyno_count}| current dynos = #{cwd}")
+
 				if new_dyno_count.nil?
 					send_heroku_kill_all_to_min_workers
 				elsif new_dyno_count == 1
@@ -87,6 +88,7 @@ module Resque
 					if time_to_scale?
 						pending = Resque.info[:pending] + post_adjust
 						working = Resque.info[:working] + post_adjust
+						log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
 						new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
 						scale(new_dyno_count)
 					end
