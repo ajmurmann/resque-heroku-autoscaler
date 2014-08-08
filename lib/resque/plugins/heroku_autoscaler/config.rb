@@ -11,7 +11,7 @@ module Resque
           @scaling_allowed
         end
 
-        @new_worker_dyno_count = scaling_system
+        @new_worker_dyno_count = self.scaling_system
 
         attr_writer :heroku_api_key
         def heroku_api_key
@@ -42,10 +42,8 @@ module Resque
 
         def reset
           @scaling_allowed       = true
-          @new_worker_dyno_count = scaling_system
+          @new_worker_dyno_count = self.scaling_system
         end
-
-      private
 
         def scaling_system
           Proc.new do |data_hsh|
