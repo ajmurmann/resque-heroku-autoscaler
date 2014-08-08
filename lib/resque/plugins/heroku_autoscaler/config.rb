@@ -11,7 +11,29 @@ module Resque
           @scaling_allowed
         end
 
-        @new_worker_dyno_count = self.scaling_system
+        @new_worker_dyno_count = Proc.new do |data_hsh|
+            pending = data_hsh[:pending].to_i
+            workers = data_hsh[:workers].to_i
+            working = data_hsh[:working].to_i
+            if pending > 0
+              if (workers - 4) < working
+                1
+              else
+                # do nothing
+                0
+              end
+            else
+              if working == 0
+                # kill all the workers
+                nil
+              elsif (workers > working + 8)
+                -1
+              else
+                # do nothing
+                0
+              end
+            end
+          end
 
         attr_writer :heroku_api_key
         def heroku_api_key
@@ -42,7 +64,29 @@ module Resque
 
         def reset
           @scaling_allowed       = true
-          @new_worker_dyno_count = self.scaling_system
+          @new_worker_dyno_count = Proc.new do |data_hsh|
+            pending = data_hsh[:pending].to_i
+            workers = data_hsh[:workers].to_i
+            working = data_hsh[:working].to_i
+            if pending > 0
+              if (workers - 4) < working
+                1
+              else
+                # do nothing
+                0
+              end
+            else
+              if working == 0
+                # kill all the workers
+                nil
+              elsif (workers > working + 8)
+                -1
+              else
+                # do nothing
+                0
+              end
+            end
+          end
         end
 
         def scaling_system
