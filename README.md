@@ -1,3 +1,35 @@
+Behavior
+
+Improvements :
+
+VERSION 0.3
+sets a maximum number of workers off the config var
+  done set the ENV['WORKER_MAX'] or it defaults to 5
+has an algo for dyno scaler vs amount of workers
+  done
+logs or saves a ditto
+  logs is done
+convert between resque workers and heroku worker dynos
+  done
+gradual up scaling
+  done
+removing the deprecated heroku - api gem
+  done
+sets a minimum off the config var
+  done set the ENV['WORKER_MIN'] or it defaults to 0
+
+
+VERSION 0.4
+scale open workers when a slow task has bogged queue - tasks are waiting
+gradual down scaling
+
+turn on / off scaling with an environment var
+  later
+
+
+
+
+
 Resque Heroku Autoscaler (RHA)
 =======================
 
