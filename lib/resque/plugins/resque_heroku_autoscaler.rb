@@ -13,6 +13,7 @@ module Resque
 			end
 
 			def after_enqueue_scale_workers_up(*args)
+				log("\nScaling Resque Worker - after_enqueue_scale_workers_up")
 				if current_worker_dynos == 0
 					scale(1, 0)
 				else
@@ -21,10 +22,12 @@ module Resque
 			end
 
 			def after_perform_scale_workers(*args)
+				log("\nScaling Resque Worker - after_perform_scale_workers")
 				calculate_and_set_worker_dynos
 			end
 
 			def on_failure_scale_workers(*args)
+				log("\nScaling Resque Worker - on_failure_scale_workers")
 				calculate_and_set_worker_dynos
 			end
 
