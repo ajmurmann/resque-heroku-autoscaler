@@ -86,7 +86,8 @@ module Resque
 					wait_for_task_or_scale
 					if time_to_scale?
 						pending = Resque.info[:pending] + post_adjust
-						new_dyno_count = config.new_worker_dyno_count(pending,Resque.info[:workers],Resque.info[:working])
+						working = Resque.info[:working] + post_adjust
+						new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
 						scale(new_dyno_count)
 					end
 				end
