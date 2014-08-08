@@ -64,7 +64,7 @@ module Resque
 				# wary = ary.select { |pro| pro["type"] == "worker" }
 				# qary = wary.map {|a| a["quantity"] }
 				# qary.sum
-				q = heroku.dyno.list(config.heroku_app)
+				q = heroku_api.dyno.list(config.heroku_app)
 				q.sum do |d|
 					if d["type"] == "worker" && d["state"] == "up"
 					 	1
