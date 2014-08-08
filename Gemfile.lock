@@ -3,7 +3,7 @@ PATH
   specs:
     resque-heroku-autoscaler (0.3.1.1)
       activesupport
-      heroku-api
+      platform-api
       resque (>= 1.8)
 
 GEM
@@ -24,9 +24,6 @@ GEM
       moneta
       multi_json (>= 1.9.2)
       netrc
-    heroku-api (0.3.19)
-      excon (~> 0.38)
-      multi_json (~> 1.8)
     i18n (0.6.11)
     json (1.8.1)
     minitest (5.4.0)
