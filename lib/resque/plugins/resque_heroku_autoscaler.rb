@@ -47,11 +47,14 @@ module Resque
 					# cant scale down yet
 					# if i could find out what worker the Resque job is on
 					# i could then find out what workers dont have jobs and kill those
+					# testing letting heroku make the decision below
+					send_heroku_change_workers (cwd - 1)
 				end
 				Resque.redis.set('last_scaled', Time.now)
 			end
 
 			def send_heroku_kill_all_to_min_workers
+				log("\nScaling Resque Worker- send_heroku_kill_all_to_min_workers")
 				heroku_api.formation.update(config.heroku_app, 'worker', {'quantity' => config.min_worker_dynos })
 			end
 
@@ -64,10 +67,6 @@ module Resque
 			end
 
 			def current_worker_dynos
-				# ary  = heroku.formation.list(config.heroku_app)
-				# wary = ary.select { |pro| pro["type"] == "worker" }
-				# qary = wary.map {|a| a["quantity"] }
-				# qary.sum
 				q = heroku_api.dyno.list(config.heroku_app)
 				q.sum do |d|
 					if d["type"] == "worker" && d["state"] == "up"
@@ -86,7 +85,7 @@ module Resque
 				if config.scaling_allowed?
 					wait_for_task_or_scale
 					if time_to_scale?
-						pending = Resque.info[:pending] + post_adjust
+						pending = Resque.info[:pending]
 						working = Resque.info[:working] + post_adjust
 						log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
 						new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
