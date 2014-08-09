@@ -60,6 +60,7 @@ module Resque
 
 			def send_heroku_change_workers num
 				if num <= config.max_worker_dynos
+					log("\nScaling Resque Worker- send_heroku_change_workers #{num}")
 					heroku_api.formation.update(config.heroku_app, 'worker', {'quantity' => num })
 				else
 					log("\nScaling Resque Worker- max worker limit hit #{num}")
