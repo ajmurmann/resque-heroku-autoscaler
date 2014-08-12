@@ -29,11 +29,28 @@ module Resque
 
 		private
 
-			def scale(new_dyno_count, cwd=nil)
-				return nil if new_dyno_count == 0
+			def calculate_and_set_worker_dynos(post_adjust=0)
+				if config.scaling_allowed?
+					pending = Resque.info[:pending]
+					if (current_worker_dynos == 0) && (pending > 0)
+						scale(1, 0)
+					else
+						wait_for_task_or_scale
+						if time_to_scale?
+							working = Resque.info[:working] + post_adjust
+							log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
+							new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
+							scale(new_dyno_count)
+						end
+					end
+				end
+			end
 
+			def scale(new_dyno_count, cwd=nil)
 				cwd = current_worker_dynos if cwd.nil?
 				log("\nScaling Resque Worker - new_dyno_count = |#{new_dyno_count}| current dynos = #{cwd}")
+
+				return nil if new_dyno_count == 0
 
 				if new_dyno_count.nil?
 					send_heroku_kill_all_to_min_workers
@@ -78,25 +95,9 @@ module Resque
 				@heroku_api ||= PlatformAPI.connect_oauth(config.heroku_api_key)
 			end
 
-			def calculate_and_set_worker_dynos(post_adjust=0)
-				if config.scaling_allowed?
-					pending = Resque.info[:pending]
-					if (current_worker_dynos == 0) && (pending > 0)
-						scale(1, 0)
-					else
-						wait_for_task_or_scale
-						if time_to_scale?
-							working = Resque.info[:working] + post_adjust
-							log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
-							new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
-							scale(new_dyno_count)
-						end
-					end
-				end
-			end
 
 			def wait_for_task_or_scale
-				until Resque.info[:pending] > 0 || time_to_scale?
+				if Resque.info[:pending] == 0 || !time_to_scale?
 					Kernel.sleep(0.5)
 				end
 			end
