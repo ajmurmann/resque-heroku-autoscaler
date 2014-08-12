@@ -14,11 +14,7 @@ module Resque
 
 			def after_enqueue_scale_workers_up(*args)
 				log("\nScaling Resque Worker - after_enqueue_scale_workers_up")
-				if current_worker_dynos == 0
-					scale(1, 0)
-				else
-					calculate_and_set_worker_dynos
-				end
+				calculate_and_set_worker_dynos
 			end
 
 			def after_perform_scale_workers(*args)
@@ -84,13 +80,17 @@ module Resque
 
 			def calculate_and_set_worker_dynos(post_adjust=0)
 				if config.scaling_allowed?
-					wait_for_task_or_scale
-					if time_to_scale?
-						pending = Resque.info[:pending]
-						working = Resque.info[:working] + post_adjust
-						log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
-						new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
-						scale(new_dyno_count)
+					pending = Resque.info[:pending]
+					if (current_worker_dynos == 0) && (pending > 0)
+						scale(1, 0)
+					else
+						wait_for_task_or_scale
+						if time_to_scale?
+							working = Resque.info[:working] + post_adjust
+							log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
+							new_dyno_count = config.new_worker_dyno_count(pending, Resque.info[:workers], working)
+							scale(new_dyno_count)
+						end
 					end
 				end
 			end
