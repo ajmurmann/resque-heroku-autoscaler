@@ -1,30 +1,29 @@
-B
 Improvements :
 =======================
 
-##VERSION 0.3
-#sets a maximum number of workers off the config var
+#VERSION 0.3+
+###sets a maximum number of workers off the config var
   -done set the ENV['WORKER_MAX'] or it defaults to 5
-#has an algo for dyno scaler vs amount of workers
+###has an algo for dyno scaler vs amount of workers
   -done
-#logs or saves a ditto
+###logs or saves a ditto
   -logs is done
-#convert between resque workers and heroku worker dynos
+###convert between resque workers and heroku worker dynos
   -done
-#gradual up scaling
+###gradual up scaling
   -done
-#removing the deprecated heroku - api gem
+###removing the deprecated heroku - api gem
   -done
-#sets a minimum off the config var
+###sets a minimum off the config var
   -done set the ENV['WORKER_MIN'] or it defaults to 0
-#gradual down scaling
+###gradual down scaling
   -testing letting heroku handle graceful downgrading
 
 
-VERSION 0.4
-#scale open workers when a slow task has bogged queue - tasks are waiting
+#VERSION 0.4
+###scale open workers when a slow task has bogged queue - tasks are waiting
 
-#turn on / off scaling with an environment var
+###turn on / off scaling with an environment var
   -later
 
 
