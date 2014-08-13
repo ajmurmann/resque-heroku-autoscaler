@@ -1,5 +1,5 @@
 require 'rspec'
-require 'heroku-api'
+require 'platform-api'
 require 'resque'
 require 'timecop'
 require 'active_support/all'

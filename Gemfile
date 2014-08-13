@@ -4,7 +4,7 @@ gemspec
 
 gem 'activesupport', :require => 'active_support/all'
 gem 'resque', '>= 1.8'
-gem 'heroku-api'
+gem 'platform-api'
 
 group :development do
   gem "rspec", "~> 2.0"

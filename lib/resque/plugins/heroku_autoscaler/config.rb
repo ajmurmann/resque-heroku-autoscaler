@@ -4,14 +4,36 @@ module Resque
       module Config
         extend self
 
-        @scaling_disabled = false
+        @scaling_allowed = true
 
-        attr_writer :scaling_disabled
-        def scaling_disabled?
-          @scaling_disabled
+        attr_writer :scaling_allowed
+        def scaling_allowed?
+          @scaling_allowed
         end
 
-        @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
+        @new_worker_dyno_count = Proc.new do |data_hsh|
+            pending = data_hsh[:pending].to_i
+            workers = data_hsh[:workers].to_i
+            working = data_hsh[:working].to_i
+            if pending > 0
+              if (workers - 4) < working
+                1
+              else
+                # do nothing
+                0
+              end
+            else
+              if working == 0
+                # kill all the workers
+                nil
+              elsif (workers > working + 8)
+                -1
+              else
+                # do nothing
+                0
+              end
+            end
+          end
 
         attr_writer :heroku_api_key
         def heroku_api_key
@@ -28,18 +50,70 @@ module Resque
           @wait_time || 60
         end
 
-        def new_worker_count(pending=nil, *payload, &calculate_count)
-          if calculate_count
-            @new_worker_count = calculate_count
-          else
-            @new_worker_count.call(pending, *payload)
-          end
+        def max_worker_dynos
+          @max_workers ||= (ENV['WORKER_MAX'] || 5)
+        end
+
+        def min_worker_dynos
+          @min_workers ||= (ENV['WORKER_MIN'] || 0)
+        end
+
+        def new_worker_dyno_count(pending, workers, working)
+          @new_worker_dyno_count.call({ pending: pending, workers: workers, working: working })
         end
 
         def reset
-          @scaling_disabled = false
-          @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
+          @scaling_allowed       = true
+          @new_worker_dyno_count = Proc.new do |data_hsh|
+            pending = data_hsh[:pending].to_i
+            workers = data_hsh[:workers].to_i
+            working = data_hsh[:working].to_i
+            if pending > 0
+              if (workers - 4) < working
+                1
+              else
+                # do nothing
+                0
+              end
+            else
+              if working == 0
+                # kill all the workers
+                nil
+              elsif (workers > working + 8)
+                -1
+              else
+                # do nothing
+                0
+              end
+            end
+          end
         end
+
+        # def scaling_system
+        #   Proc.new do |data_hsh|
+        #     pending = data_hsh[:pending].to_i
+        #     workers = data_hsh[:workers].to_i
+        #     working = data_hsh[:working].to_i
+        #     if pending > 0
+        #       if (workers - 4) < working
+        #         1
+        #       else
+        #         # do nothing
+        #         0
+        #       end
+        #     else
+        #       if working == 0
+        #         # kill all the workers
+        #         nil
+        #       elsif (workers > working + 8)
+        #         -1
+        #       else
+        #         # do nothing
+        #         0
+        #       end
+        #     end
+        #   end
+        # end
       end
     end
   end
