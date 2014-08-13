@@ -13,17 +13,23 @@ module Resque
 			end
 
 			def after_enqueue_scale_workers_up(*args)
-				log("\nScaling Resque Worker - after_enqueue_scale_workers_up")
+				queued = Resque.redis.get('enqueued').to_i
+				Resque.redis.set('enqueued', queued + 1)
+				log("\nScaling Resque Worker - after_enqueue_scale_workers_up | queued = #{queued}")
 				calculate_and_set_worker_dynos
 			end
 
 			def after_perform_scale_workers(*args)
-				log("\nScaling Resque Worker - after_perform_scale_workers")
+				queued = Resque.redis.get('enqueued').to_i
+				Resque.redis.set('enqueued', queued - 1)
+				log("\nScaling Resque Worker - after_perform_scale_workers | queued = #{queued}")
 				calculate_and_set_worker_dynos(-1)
 			end
 
 			def on_failure_scale_workers(*args)
-				log("\nScaling Resque Worker - on_failure_scale_workers")
+				queued = Resque.redis.get('enqueued').to_i
+				Resque.redis.set('enqueued', queued - 1)
+				log("\nScaling Resque Worker - on_failure_scale_workers | queued = #{queued}")
 				calculate_and_set_worker_dynos(-1)
 			end
 
@@ -34,8 +40,12 @@ module Resque
 					pending = Resque.info[:pending]
 					working = Resque.info[:working]  + post_adjust
 					log("\nScaling Resque Worker - p:#{pending} wkrs:#{ Resque.info[:workers]}, wing:#{working}")
-					if (current_worker_dynos == 0) && (pending > 0)
-						scale(1, 0)
+					if (current_worker_dynos == 0)
+						if (pending > 0)
+							scale(1, 0)
+						elsif (Resque.redis.get('enqueued').to_i > 0)
+							scale(1, 0)
+						end
 					else
 						#wait_for_task_or_scale
 						if true #time_to_scale?
@@ -57,11 +67,11 @@ module Resque
 				elsif new_dyno_count == 1
 					send_heroku_change_workers (cwd + 1)
 				elsif new_dyno_count == -1
-					# cant scale down yet
-					# if i could find out what worker the Resque job is on
-					# i could then find out what workers dont have jobs and kill those
-					# testing letting heroku make the decision below
-					send_heroku_change_workers (cwd - 1)
+					if (cwd - 1 == 0) && (Resque.redis.get('enqueued').to_i != 0)
+						#skip
+					else
+						send_heroku_change_workers (cwd - 1)
+					end
 				end
 				Resque.redis.set('last_scaled', Time.now)
 			end
