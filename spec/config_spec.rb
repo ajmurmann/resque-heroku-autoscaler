@@ -29,11 +29,11 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
 
   describe ".scaling_disabled?" do
 
-    it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be_false}
+    it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be false }
 
     it "sets scaling to disabled" do
       subject.scaling_disabled = true
-      subject.scaling_disabled?.should be_true
+      subject.scaling_disabled?.should be true
     end
   end
 
@@ -84,6 +84,40 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
         it { subject.new_worker_count(0).should == 0 }
         it { subject.new_worker_count(1).should == 1 }
       end
+    end
+  end
+
+  describe '.exception_handler' do
+    it 'has a default that does not raise' do
+      e = Exception.new('OMG')
+      subject.exception_handler(e)
+    end
+
+    it "can store a new block as a Proc" do
+      @called = false
+
+      subject.exception_handler do |e|
+        @called = true
+      end
+
+      subject.exception_handler(nil)
+      expect(@called).to be true
+    end
+
+  end
+
+
+  describe '.api_exceptions' do
+    it 'has a sane default' do
+      expected = [Excon::Errors::Error, Heroku::API::Errors::ErrorWithResponse]
+      expect(Resque::Plugins::HerokuAutoscaler::Config.api_exceptions).to eq expected
+    end
+
+    it "can be set" do
+      subject.api_exceptions = [Heroku::API::Errors::RateLimitExceeded]
+      expect(subject.api_exceptions).to eq [Heroku::API::Errors::RateLimitExceeded]
+      # Reset to default for other tests to function properly
+      subject.api_exceptions = [Excon::Errors::Error, Heroku::API::Errors::ErrorWithResponse]
     end
   end
 end

@@ -12,6 +12,10 @@ module Resque
         end
 
         @new_worker_count = Proc.new {|pending| pending >0 ? 1 : 0}
+        @exception_handler = Proc.new do |exception|
+          p exception
+          puts exception.backtrace
+        end
 
         attr_writer :heroku_api_key
         def heroku_api_key
@@ -34,6 +38,19 @@ module Resque
           else
             @new_worker_count.call(pending, *payload)
           end
+        end
+
+        def exception_handler(exception=nil, &new_handler)
+          if new_handler
+            @exception_handler = new_handler
+          else
+            @exception_handler.call exception
+          end
+        end
+
+        attr_writer :api_exceptions
+        def api_exceptions
+          @api_exceptions || [Excon::Errors::Error, Heroku::API::Errors::ErrorWithResponse]
         end
 
         def reset
