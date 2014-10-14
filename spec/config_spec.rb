@@ -29,11 +29,11 @@ describe Resque::Plugins::HerokuAutoscaler::Config do
 
   describe ".scaling_disabled?" do
 
-    it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be_false}
+    it{ Resque::Plugins::HerokuAutoscaler::Config.scaling_disabled?.should be false }
 
     it "sets scaling to disabled" do
       subject.scaling_disabled = true
-      subject.scaling_disabled?.should be_true
+      subject.scaling_disabled?.should be true
     end
   end
 
