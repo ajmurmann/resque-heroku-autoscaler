@@ -238,6 +238,21 @@ describe Resque::Plugins::HerokuAutoscaler do
       mock(TestJob).heroku_api { mock(@fake_heroku_api).post_ps_scale('some_app_name', 'worker', 10) }
       TestJob.set_workers(10)
     end
+
+    it 'should call the exception handler when heroku fails' do
+      @called = false
+      subject.config do |c|
+        c.exception_handler do |e|
+          @called = true
+        end
+      end
+
+      stub(TestJob).current_workers { 0 }
+      stub(TestJob).heroku_api { stub(@fake_heroku_api).post_ps_scale { raise Excon::Errors::Error } }
+
+      TestJob.set_workers(10)
+      expect(@called).to be true
+    end
   end
 
   describe ".heroku_api" do
@@ -295,5 +310,20 @@ describe Resque::Plugins::HerokuAutoscaler do
       } } }
       TestJob.current_workers.should == 2
     end
+
+
+    it 'should call the exception handler when heroku fails' do
+      @called = false
+      subject.config do |c|
+        c.exception_handler do |e|
+          @called = true
+        end
+      end
+
+      stub(TestJob).heroku_api { stub(@fake_heroku_api).get_ps { raise Excon::Errors::Error } }
+      TestJob.current_workers
+      expect(@called).to be true
+    end
+
   end
 end

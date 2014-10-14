@@ -30,10 +30,14 @@ module Resque
         if number_of_workers != current_workers
           heroku_api.post_ps_scale(config.heroku_app, 'worker', number_of_workers)
         end
+      rescue *config.api_exceptions => e
+        config.exception_handler e
       end
 
       def current_workers
         heroku_api.get_ps(config.heroku_app).body.count {|p| p['process'].match(/worker\.\d+/) }
+      rescue *config.api_exceptions => e
+        config.exception_handler e
       end
 
       def heroku_api
