@@ -6,7 +6,7 @@ A [Resque][rq] plugin. Requires Resque 1.8 and the Heroku-api gem.
 This gem scales your Heroku workers according to the number of pending Resque jobs. The original idea comes from Daniel Huckstep's [blog post on the topic][dh]
 
 
-##Setup
+## Setup
 
 In order for the scaling to work RHA needs to know your **Heroku app's name, your Heroku user name and your Heroku password**. Per default those are being read from the following environment variables:
 
